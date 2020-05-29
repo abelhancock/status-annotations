@@ -103,21 +103,25 @@ async function createAnnotations(status) {
 
 		//define and load the font
 		let fontName = {
-			'family': 'Inter',
+			'family': 'Source Sans Pro',
 			'style': 'Regular'
 		}
 		await figma.loadFontAsync(fontName);
 
 		//apply the font properties to the text node
 		text.fontName = fontName;
-		text.fontSize = 12;
+		text.fontSize = 16;
 		text.lineHeight = {
-			'value': 16,
+			'value': 24,
 			'unit': 'PIXELS'
 		}
 
 		//add text to the text node
-		text.characters = status.title;
+		var today = new Date();
+
+		var date = today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate();
+		let statusText = "(" + date + ") " + status.title;
+		text.characters = statusText;
 
 		//create the icon
 		let icon = figma.createNodeFromSvg(status.icon);
@@ -146,10 +150,39 @@ async function createAnnotations(status) {
 			visible: true
 		}];
 
+//ABEL	//create the Border frame with auto layout
+		let annotationBorder = figma.createFrame();
+		annotationBorder.name = 'border';
+		annotationBorder.resizeWithoutConstraints(101, 101);
+
+//ABEL	//style the stroke
+		annotationBorder.strokes = [{
+			type: 'SOLID',
+			visible: true,
+			opacity: 1,
+			blendMode: 'NORMAL',
+			color: hexToFigmaRgb(status.color),
+		}];
+		annotationBorder.strokeWeight = 2;
+		
+//ABEL	//style frame background
+		function clone(val) {
+			return JSON.parse(JSON.stringify(val))
+		  }
+		const fills = clone(annotationBorder.fills);
+		fills[0].opacity = 0;
+		annotationBorder.fills = fills;
+		//annotationBorder.fills[0].opacity = 0;
+
+//ABEL	//put the border into an array
+		let border = annotationBorder;
+		border.name = "status_border";
+
 		//loop through each frame
 		selection.forEach(node => {
 
 			let statusAnnotation;
+			let statusBorder;
 
 			//remove existing status if there is one
 			removeStatus(node);
@@ -157,8 +190,10 @@ async function createAnnotations(status) {
 			//check to see if first annotation
 			if (count === 0) {
 				statusAnnotation = annotation;
+				statusBorder = border;
 			} else {
 				statusAnnotation = annotation.clone();
+				statusBorder = border.clone();
 			}
 
 			//get the frame id
@@ -170,8 +205,21 @@ async function createAnnotations(status) {
 			statusAnnotation.x = x;
 			statusAnnotation.y = y;
 
+			//move border into parent frame
+			node.appendChild(statusBorder);
+
+
+//ABEL		//set the position of the border
+			statusBorder.x = 0;
+			statusBorder.y = 0;
+			statusBorder.locked = true;
+
+//ABEL		//set the size of the border
+			statusBorder.resize(node.width, node.height);
+
 			//add meta data to the annotation
 			statusAnnotation.setPluginData('frameId',nodeId);
+			statusBorder.setPluginData('frameId',nodeId);
 
 			//add to group with annotations or create one
 			let annotationGroup = figma.currentPage.findOne(x => x.type === 'GROUP' && x.name === 'status_annotations') as GroupNode;
@@ -200,7 +248,7 @@ async function createAnnotations(status) {
 			//increase the counter
 			count++;
 		});
-
+		
 	} else {
 		figma.notify('Please select a top level frame, component, or group');
 	}
@@ -231,9 +279,13 @@ function deleteSelected() {
 //clear all annotations
 function deleteAll() {
 	let annotationGroup = figma.currentPage.findOne(x => x.type === 'GROUP' && x.name === 'status_annotations') as GroupNode;
+	let allAnnotationBorders = figma.currentPage.findAll(x => x.type === 'FRAME' && x.name === 'status_border');
 	
 	if (annotationGroup) {
 		annotationGroup.remove();
+		allAnnotationBorders.forEach(node => {
+			node.remove();
+		});
 	}
 
 	//need to make this more performant
@@ -256,6 +308,7 @@ function removeStatus(frame) {
 
 	let targetId = frame.id;
 	let annotationGroup = figma.currentPage.findOne(x => x.type === 'GROUP' && x.name === 'status_annotations') as GroupNode;
+	let allAnnotationBorders = figma.currentPage.findAll(x => x.type === 'FRAME' && x.name === 'status_border');
 
 	//remove shared plugin data`
 	frame.setSharedPluginData('statusannotations', 'status', '');
@@ -268,6 +321,12 @@ function removeStatus(frame) {
 				removeCount++;
 			}
 		})
+		allAnnotationBorders.forEach(border => {
+			let refId = border.getPluginData('frameId');
+			if (targetId === refId) {
+				border.remove();
+			}
+		});
 	}
 }
 
