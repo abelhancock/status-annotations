@@ -25,7 +25,7 @@
 		{
 			'title': 'Review',
 			'icon': iconReview,
-			'color': '#FFCF23'
+			'color': '#ECAA00'
 		},
 		{
 			'title': 'Approved',
