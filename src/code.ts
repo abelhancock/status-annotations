@@ -76,26 +76,27 @@ async function createAnnotations(status) {
 		let count = 0;
 
 		//create the frame with auto layout
-		let annotionFrame = figma.createFrame();
-		annotionFrame.counterAxisSizingMode = 'AUTO';
-		annotionFrame.layoutMode = 'HORIZONTAL';
-		annotionFrame.itemSpacing = 4;
-		annotionFrame.horizontalPadding = 6;
-		annotionFrame.verticalPadding = 4;
-		annotionFrame.name = 'annotation';
-		annotionFrame.topLeftRadius = 3;
-		annotionFrame.topRightRadius = 3;
+		let annotationFrame = figma.createFrame();
+		annotationFrame.counterAxisSizingMode = 'AUTO';
+		annotationFrame.layoutMode = 'HORIZONTAL';
+		annotationFrame.itemSpacing = 4;
+		annotationFrame.horizontalPadding = 12;
+		annotationFrame.verticalPadding = 6;
+		annotationFrame.name = 'annotation';
+		annotationFrame.cornerRadius = 4;
+		
+		const annotationColor = clone(annotationFrame.fills);
+		annotationColor[0].color = hexToFigmaRgb(status.color);
+		annotationFrame.fills = annotationColor;
 
-		//style the stroke
-		annotionFrame.strokes = [{
+		annotationFrame.strokes = [{
 			type: 'SOLID',
 			visible: true,
 			opacity: 1,
 			blendMode: 'NORMAL',
-			color: hexToFigmaRgb('#DBDBDB')
+			color: hexToFigmaRgb(status.color),
 		}];
-		annotionFrame.strokeWeight = 1;
-		
+		annotationFrame.strokeWeight = 2;
 
 		//create and style the text node
 		let text = figma.createText();
@@ -104,17 +105,22 @@ async function createAnnotations(status) {
 		//define and load the font
 		let fontName = {
 			'family': 'Source Sans Pro',
-			'style': 'Regular'
+			'style': 'Bold'
 		}
 		await figma.loadFontAsync(fontName);
 
 		//apply the font properties to the text node
 		text.fontName = fontName;
-		text.fontSize = 16;
+		text.fontSize = 24;
 		text.lineHeight = {
-			'value': 24,
+			'value': 32,
 			'unit': 'PIXELS'
 		}
+		const textColor = clone(text.fills)
+		textColor[0].color.r = 1
+		textColor[0].color.b = 1
+		textColor[0].color.g = 1
+		text.fills = textColor
 
 		//add text to the text node
 		var today = new Date();
@@ -127,62 +133,27 @@ async function createAnnotations(status) {
 		let icon = figma.createNodeFromSvg(status.icon);
 		icon.name = 'icon-' + status.slug;
 		icon.layoutAlign = 'CENTER';
+		icon.resize(20, 20);
 
 		//add icon and text to annotation
-		annotionFrame.insertChild(0,text);
-		annotionFrame.insertChild(1,icon);
+		annotationFrame.insertChild(0,text);
+		annotationFrame.insertChild(1,icon);
 
 		//group the frame and put it into an array
 		let itemsToGroup = [];
-		itemsToGroup.push(annotionFrame);
+		itemsToGroup.push(annotationFrame);
 		let annotation = figma.group(itemsToGroup, figma.currentPage);
 		annotation.name = status.title;
-
-		//create the inner shadow
-		let innerShadowColor = hexToFigmaRgb(status.color);
-		innerShadowColor = Object.assign({a: 1.0}, innerShadowColor);
-		annotation.effects = [{
-			blendMode: 'NORMAL',
-			color: innerShadowColor,
-			offset: {x: 0, y: -2},
-			radius: 0,
-			type: 'INNER_SHADOW',
-			visible: true
-		}];
-
-//ABEL	//create the Border frame with auto layout
-		let annotationBorder = figma.createFrame();
-		annotationBorder.name = 'border';
-		annotationBorder.resizeWithoutConstraints(101, 101);
-
-//ABEL	//style the stroke
-		annotationBorder.strokes = [{
-			type: 'SOLID',
-			visible: true,
-			opacity: 1,
-			blendMode: 'NORMAL',
-			color: hexToFigmaRgb(status.color),
-		}];
-		annotationBorder.strokeWeight = 2;
 		
 //ABEL	//style frame background
 		function clone(val) {
 			return JSON.parse(JSON.stringify(val))
-		  }
-		const fills = clone(annotationBorder.fills);
-		fills[0].opacity = 0;
-		annotationBorder.fills = fills;
-		//annotationBorder.fills[0].opacity = 0;
-
-//ABEL	//put the border into an array
-		let border = annotationBorder;
-		border.name = "status_border";
+		}
 
 		//loop through each frame
 		selection.forEach(node => {
 
 			let statusAnnotation;
-			let statusBorder;
 
 			//remove existing status if there is one
 			removeStatus(node);
@@ -190,10 +161,8 @@ async function createAnnotations(status) {
 			//check to see if first annotation
 			if (count === 0) {
 				statusAnnotation = annotation;
-				statusBorder = border;
 			} else {
 				statusAnnotation = annotation.clone();
-				statusBorder = border.clone();
 			}
 
 			//get the frame id
@@ -205,21 +174,21 @@ async function createAnnotations(status) {
 			statusAnnotation.x = x;
 			statusAnnotation.y = y;
 
-			//move border into parent frame
-			node.appendChild(statusBorder);
+			// Add stroke style to frame
+			const stroke: SolidPaint = {
+				type: 'SOLID',
+				visible: true,
+				opacity: 1,
+				blendMode: 'NORMAL',
+				color: hexToFigmaRgb(status.color),
+			};
 
-
-//ABEL		//set the position of the border
-			statusBorder.x = 0;
-			statusBorder.y = 0;
-			statusBorder.locked = true;
-
-//ABEL		//set the size of the border
-			statusBorder.resize(node.width, node.height);
+			node.strokes = [stroke];
+			node.strokeWeight = 4;
+			node.strokeAlign = 'OUTSIDE';
 
 			//add meta data to the annotation
 			statusAnnotation.setPluginData('frameId',nodeId);
-			statusBorder.setPluginData('frameId',nodeId);
 
 			//add to group with annotations or create one
 			let annotationGroup = figma.currentPage.findOne(x => x.type === 'GROUP' && x.name === 'status_annotations') as GroupNode;
