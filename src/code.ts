@@ -85,18 +85,10 @@ async function createAnnotations(status) {
 		annotationFrame.name = 'annotation';
 		annotationFrame.cornerRadius = 4;
 		
+		//add status color fill to frame
 		const annotationColor = clone(annotationFrame.fills);
 		annotationColor[0].color = hexToFigmaRgb(status.color);
 		annotationFrame.fills = annotationColor;
-
-		annotationFrame.strokes = [{
-			type: 'SOLID',
-			visible: true,
-			opacity: 1,
-			blendMode: 'NORMAL',
-			color: hexToFigmaRgb(status.color),
-		}];
-		annotationFrame.strokeWeight = 2;
 
 		//create and style the text node
 		let text = figma.createText();
