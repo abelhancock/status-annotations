@@ -57,7 +57,6 @@ function getTopLevelNodes(nodes) {
 			if (node.parent === figma.currentPage) {
 				if (node.type === 'COMPONENT' || node.type === 'FRAME' || node.type === 'INSTANCE' || node.type === 'GROUP') {
 					topLevelNodesInSelection.push(node);
-					console.log(topLevelNodesInSelection)
 				}
 			}
 		});
@@ -240,12 +239,12 @@ function deleteSelected() {
 //clear all annotations
 function deleteAll() {
 	let annotationGroup = figma.currentPage.findOne(x => x.type === 'GROUP' && x.name === 'status_annotations') as GroupNode;
-	let allAnnotationBorders = figma.currentPage.findAll(x => x.type === 'FRAME' && x.name === 'status_border');
+	let selection:SceneNode[] = getTopLevelNodes(figma.currentPage.selection);
 	
 	if (annotationGroup) {
 		annotationGroup.remove();
-		allAnnotationBorders.forEach(node => {
-			node.remove();
+		selection.forEach(node => {
+			node.strokes = [];
 		});
 	}
 
@@ -269,7 +268,7 @@ function removeStatus(frame) {
 
 	let targetId = frame.id;
 	let annotationGroup = figma.currentPage.findOne(x => x.type === 'GROUP' && x.name === 'status_annotations') as GroupNode;
-	let allAnnotationBorders = figma.currentPage.findAll(x => x.type === 'FRAME' && x.name === 'status_border');
+	let selection:SceneNode[] = getTopLevelNodes(figma.currentPage.selection);
 
 	//remove shared plugin data`
 	frame.setSharedPluginData('statusannotations', 'status', '');
@@ -282,13 +281,8 @@ function removeStatus(frame) {
 				removeCount++;
 			}
 		})
-		allAnnotationBorders.forEach(border => {
-			let refId = border.getPluginData('frameId');
-			if (targetId === refId) {
-				border.remove();
-			}
-		});
 	}
+	frame.strokes = [];
 }
 
 //this function removes unused annotations and also updates the position
